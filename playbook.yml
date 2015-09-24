@@ -1,0 +1,110 @@
+---
+- hosts: all
+  vars:
+    default_branch: '8.0'
+  sudo: true
+  tasks:
+    - locale_gen: name=es_ES.UTF-8 state=present
+    - apt: update_cache=yes cache_valid_time=86400 # 1 day
+
+    - name: Install apt packages
+      apt: name={{ item }} state=present
+      with_items:
+        - postgresql-9.3
+        # used by ansible for the postgres module
+        - python-psycopg2
+        - git
+        - python-dateutil
+        - python-decorator
+        - python-docutils
+        - python-feedparser
+        - python-imaging
+        - python-jinja2
+        - python-ldap
+        - python-libxslt1
+        - python-lxml
+        - python-mako
+        - python-mock
+        - python-openid
+        - python-passlib
+        - python-psutil
+        - python-pybabel
+        - python-pychart
+        - python-pydot
+        - python-pyparsing
+        - python-pypdf
+        - python-reportlab
+        - python-requests
+        - python-simplejson
+        - python-tz
+        - python-unittest2
+        - python-vatnumber
+        - python-vobject
+        - python-werkzeug
+        - python-xlwt
+        - python-yaml
+        - antiword
+        - graphviz
+        - ghostscript
+        - python-gevent
+        - poppler-utils
+        - samba
+        - nginx
+        - python-pip
+
+    - name: Install python packages
+      pip: name={{ item }} state=present
+      with_items:
+        - psycogreen
+        - wkhtmltopdf
+
+    - name: Create superuser for ubuntu
+      become: yes
+      become_method: sudo
+      become_user: postgres
+      postgresql_user: name=odoo password=welcome role_attr_flags=SUPERUSER
+
+    - name: Created Odoo Folders 1/2
+      file: path=/opt/odoo/ state=directory
+
+    - name: Created Odoo Folders 2/3
+      file: path=/opt/odoo/addons_tmp state=directory
+
+    - name: Created Odoo Folders 3/3
+      file: path=/opt/odoo/addons state=directory
+
+    - name: Checkout Odoo v8
+      git: repo=https://github.com/odoo/{{ item.repo }}.git dest=/opt/odoo/{{ item.repo }} version={{ default_branch }}
+      with_items:
+        - { repo: 'odoo' }
+
+    - name: Checkout Community addons
+      git: repo=https://github.com/{{ item.user }}/{{ item.repo }}.git dest=/opt/odoo/addons_tmp/{{ item.repo }} version={{ default_branch }}
+      with_items:
+        - { user: 'OCA', repo: 'hr' }
+        - { user: 'OCA', repo: 'l10n-spain' }
+        - { user: 'OCA', repo: 'project' }
+
+    - name: Clean old addons
+      shell: 'rm -r /opt/odoo/addons/*'
+
+    - name: Move addons
+      shell: 'cp -r /opt/odoo/addons_tmp/{{ item.folder }}/* /opt/odoo/addons/'
+      with_items:
+        - { folder: 'hr'}
+        - { folder: 'l10n-spain' }
+        - { folder: 'project' }
+
+    - name: End configuration
+      shell: 'mkdir -p /etc/odoo; rm /etc/odoo/odoo-service.conf; rm /etc/init.d/odoo-service;cp /vagrant/odoo_conf/server.conf /etc/odoo/odoo-service.conf; cp /vagrant/odoo_conf/init /etc/init.d/odoo-service; mkdir -p /opt/odoo/log; mkdir -p /opt/odoo/run; chown -R vagrant: /opt/odoo/;'
+
+    - name: Prepare samba and nginx
+      shell: 'cat /vagrant/odoo_conf/smb.conf  >> /etc/samba/smb.conf; cat /vagrant/odoo_conf/nginx.conf > /etc/nginx/sites-available/odoo;ln -s /etc/nginx/sites-available/odoo /etc/nginx/sites-enabled/odoo; rm /etc/nginx/sites-enabled/default;rm /etc/nginx/sites-available/default;mkdir -p /etc/ssl/nginx;cp /vagrant/odoo_conf/nginx.crt /etc/ssl/nginx/server.crt;cp /vagrant/odoo_conf/nginx.key /etc/ssl/nginx/server.key;'
+
+    - service: name=samba state=started
+
+    - service: name=nginx state=restarted
+
+    - name: Odoo Started https://192.168.0.12/
+      service: name=odoo-service state=started
+

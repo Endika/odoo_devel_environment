@@ -1,0 +1,61 @@
+#!/bin/bash
+
+DAEMON=/opt/odoo/odoo/odoo.py
+NAME=odoo-service
+DESC="Odoo - Devel Environment 8.0"
+CONFIG=/etc/odoo/odoo-service.conf
+LOGFILE=/opt/odoo/log/odoo-service.log
+USER=vagrant
+GROUP=vagrant
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+PIDFILE=/opt/odoo/run/${NAME}.pid
+
+export LOGNAME=$USER
+test -x $DAEMON || exit 0
+set -e
+
+function _start() {
+    start-stop-daemon --start --quiet --pidfile $PIDFILE --chuid $USER:$GROUP --background --make-pidfile --exec $DAEMON -- --config $CONFIG --logfile $LOGFILE --unaccent
+}
+
+function _stop() {
+    start-stop-daemon --stop --quiet --pidfile $PIDFILE --oknodo --retry 3
+    rm -f $PIDFILE
+}
+
+function _status() {
+    start-stop-daemon --status --quiet --pidfile $PIDFILE
+    return $?
+}
+
+
+case "$1" in
+        start)
+                echo -n "Starting $DESC: "
+                _start
+                echo "ok"
+                ;;
+        stop)
+                echo -n "Stopping $DESC: "
+                _stop
+                echo "ok"
+                ;;
+        restart|force-reload)
+                echo -n "Restarting $DESC: "
+                _stop
+                sleep 1
+                _start
+                echo "ok"
+                ;;
+        status)
+                echo -n "Status of $DESC: "
+                _status && echo "running" || echo "stopped"
+                ;;
+        *)
+                N=/etc/init.d/$NAME
+                echo "Usage: $N {start|stop|restart|force-reload|status}" >&2
+                exit 1
+                ;;
+esac
+
+exit 0
