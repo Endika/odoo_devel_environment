@@ -1,7 +1,7 @@
 ---
 - hosts: all
   vars:
-    default_branch: '8.0'
+    default_branch: '9.0'
   sudo: true
   tasks:
     - locale_gen: name=es_ES.UTF-8 state=present
@@ -11,9 +11,9 @@
       apt: name={{ item }} state=present
       with_items:
         - postgresql-9.3
-        # used by ansible for the postgres module
-        - python-psycopg2
-        - git
+        - nodejs
+        - node-less
+        - node-clean-css
         - python-dateutil
         - python-decorator
         - python-docutils
@@ -28,6 +28,8 @@
         - python-openid
         - python-passlib
         - python-psutil
+        # used by ansible for the postgres module
+        - python-psycopg2
         - python-pybabel
         - python-pychart
         - python-pydot
@@ -36,6 +38,7 @@
         - python-reportlab
         - python-requests
         - python-simplejson
+        - python-suds
         - python-tz
         - python-unittest2
         - python-vatnumber
@@ -43,13 +46,9 @@
         - python-werkzeug
         - python-xlwt
         - python-yaml
-        - antiword
-        - graphviz
-        - ghostscript
-        - python-gevent
-        - poppler-utils
         - samba
         - nginx
+        - git
         - python-pip
 
     - name: Install python packages
@@ -57,6 +56,7 @@
       with_items:
         - psycogreen
         - wkhtmltopdf
+        - ofxparse
 
     - name: Create superuser for ubuntu
       become: yes
@@ -64,36 +64,36 @@
       become_user: postgres
       postgresql_user: name=odoo password=welcome role_attr_flags=SUPERUSER
 
-    - name: Created Odoo Folders 1/2
+    - name: Created Odoo Folders
       file: path=/opt/odoo/ state=directory
 
-    - name: Created Odoo Folders 2/3
-      file: path=/opt/odoo/addons_tmp state=directory
+    # - name: Created Odoo Folders 2/3
+    #   file: path=/opt/odoo/addons_tmp state=directory
 
-    - name: Created Odoo Folders 3/3
-      file: path=/opt/odoo/addons state=directory
+    # - name: Created Odoo Folders 3/3
+    #   file: path=/opt/odoo/addons state=directory
 
-    - name: Checkout Odoo v8
+    - name: Checkout Odoo v9
       git: repo=https://github.com/odoo/{{ item.repo }}.git dest=/opt/odoo/{{ item.repo }} version={{ default_branch }}
       with_items:
         - { repo: 'odoo' }
 
-    - name: Checkout Community addons
-      git: repo=https://github.com/{{ item.user }}/{{ item.repo }}.git dest=/opt/odoo/addons_tmp/{{ item.repo }} version={{ default_branch }}
-      with_items:
-        - { user: 'OCA', repo: 'hr' }
-        - { user: 'OCA', repo: 'l10n-spain' }
-        - { user: 'OCA', repo: 'project' }
+    # - name: Checkout Community addons
+    #   git: repo=https://github.com/{{ item.user }}/{{ item.repo }}.git dest=/opt/odoo/addons_tmp/{{ item.repo }} version={{ default_branch }}
+    #   with_items:
+    #     - { user: 'OCA', repo: 'hr' }
+    #     - { user: 'OCA', repo: 'l10n-spain' }
+    #     - { user: 'OCA', repo: 'project' }
 
-    - name: Clean old addons
-      shell: 'rm -r /opt/odoo/addons/*'
+    # - name: Clean old addons
+    #   shell: 'rm -r /opt/odoo/addons/*'
 
-    - name: Move addons
-      shell: 'cp -r /opt/odoo/addons_tmp/{{ item.folder }}/* /opt/odoo/addons/'
-      with_items:
-        - { folder: 'hr'}
-        - { folder: 'l10n-spain' }
-        - { folder: 'project' }
+    # - name: Move addons
+    #   shell: 'cp -r /opt/odoo/addons_tmp/{{ item.folder }}/* /opt/odoo/addons/'
+    #   with_items:
+    #     - { folder: 'hr'}
+    #     - { folder: 'l10n-spain' }
+    #     - { folder: 'project' }
 
     - name: End configuration
       shell: 'mkdir -p /etc/odoo; rm /etc/odoo/odoo-service.conf; rm /etc/init.d/odoo-service;cp /vagrant/odoo_conf/server.conf /etc/odoo/odoo-service.conf; cp /vagrant/odoo_conf/init /etc/init.d/odoo-service; mkdir -p /opt/odoo/log; mkdir -p /opt/odoo/run; chown -R vagrant: /opt/odoo/;'

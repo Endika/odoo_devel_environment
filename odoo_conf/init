@@ -2,7 +2,7 @@
 
 DAEMON=/opt/odoo/odoo/odoo.py
 NAME=odoo-service
-DESC="Odoo - Devel Environment 8.0"
+DESC="Odoo - Devel Environment 9.0"
 CONFIG=/etc/odoo/odoo-service.conf
 LOGFILE=/opt/odoo/log/odoo-service.log
 USER=vagrant
